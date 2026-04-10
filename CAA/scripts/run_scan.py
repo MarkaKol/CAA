@@ -1,69 +1,73 @@
 #!/usr/bin/env python3
 import asyncio
-import argparse
 import sys
+import os
 from pathlib import Path
 
-sys.path.append(str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent))
+os.environ['LD_LIBRARY_PATH'] = '/root/CFM/cpp_core/build/lib:' + os.environ.get('LD_LIBRARY_PATH', '')
 
-from core.scanner_main import CFMScanner
+from core.scanner_main_v2 import CFMScannerV2
 from core.analyzer_core import AntiFraudAnalyzer
 from core.report_generator import ReportGenerator
-from utils.logger import setup_logger
-
-logger = setup_logger(__name__)
 
 async def main():
-    parser = argparse.ArgumentParser(description="CAA Scanner")
-    parser.add_argument("--url", required=True, help="Target URL")
-    parser.add_argument("--profile", default="clean", choices=["clean", "cfm_default", "cfm_stealth"], help="Browser profile")
-    parser.add_argument("--analyze", action="store_true", help="Run analysis after scan")
-    parser.add_argument("--output", default="auto", help="Output report path")
+    url = "https://videoplayer.mediavi.ru/"
     
-    args = parser.parse_args()
+    print("=" * 60)
+    print("CAA - CFM AntiFraud Analyzer")
+    print("=" * 60)
+    print(f"Target: {url}")
+    print()
     
-    logger.info(f"Starting scan on {args.url} with profile {args.profile}")
-    
-    scanner = CFMScanner()
-    result = await scanner.scan(args.url, args.profile)
+    scanner = CFMScannerV2()
+    result = await scanner.scan(url, "clean")
     
     if result["success"]:
-        logger.info(f"Scan completed. Blocked: {result['blocked']}")
-        logger.info(f"Logs collected: {len(result['logs'])}")
+        print(f"\n✓ Scan completed!")
+        print(f"  Scan ID: {result['scan_id']}")
+        print(f"  Logs collected: {len(result['logs'])}")
+        print(f"  Blocked: {result['blocked']}")
         
-        if args.analyze:
-            logger.info("Running analysis...")
-            analyzer = AntiFraudAnalyzer()
-            
-            from config import RAW_LOGS_DIR
-            report_path = RAW_LOGS_DIR / f"{result['scan_id']}.json"
-            
-            analysis = analyzer.analyze_report(report_path)
-            
-            generator = ReportGenerator()
-            
-            if args.output == "auto":
-                json_path = generator.generate_json(analysis)
-                html_path = generator.generate_html(analysis)
-                logger.info(f"Reports saved: {json_path}, {html_path}")
-            else:
-                output_path = Path(args.output)
-                if output_path.suffix == ".json":
-                    generator.generate_json(analysis, output_path)
-                elif output_path.suffix == ".html":
-                    generator.generate_html(analysis, output_path)
-                else:
-                    generator.generate_json(analysis, output_path.with_suffix(".json"))
-                    generator.generate_html(analysis, output_path.with_suffix(".html"))
-            
-            logger.info(f"Suspicion score: {analysis['suspicion_score']}/100")
-            logger.info(f"Risk level: {analysis['risk_level']}")
-            
-            for rec in analysis["recommendations"][:5]:
-                logger.info(f"Recommendation: {rec}")
+        if result["screenshot_path"]:
+            print(f"  Screenshot: {result['screenshot_path']}")
+        
+        print("\nAnalyzing results...")
+        analyzer = AntiFraudAnalyzer()
+        
+        raw_report_path = Path(__file__).parent / "reports" / "raw" / f"{result['scan_id']}.json"
+        analysis = analyzer.analyze_report(raw_report_path)
+        
+        print("\n" + "=" * 60)
+        print("ANALYSIS RESULTS")
+        print("=" * 60)
+        print(f"  Suspicion score: {analysis['suspicion_score']}/100")
+        print(f"  Risk level: {analysis['risk_level'].upper()}")
+        print(f"  Detected triggers: {len(analysis['detected_triggers'])}")
+        
+        if analysis['detected_triggers']:
+            print("\n  Top triggers:")
+            for trigger in analysis['detected_triggers'][:10]:
+                print(f"    - {trigger}")
+        
+        if analysis['network_endpoints']:
+            print("\n  Network endpoints detected:")
+            for endpoint in analysis['network_endpoints'][:5]:
+                print(f"    - {endpoint}")
+        
+        if analysis['recommendations']:
+            print("\n  RECOMMENDATIONS:")
+            for rec in analysis['recommendations']:
+                print(f"    ! {rec}")
+        
+        generator = ReportGenerator()
+        html_path = generator.generate_html(analysis)
+        print(f"\n  HTML report: {html_path}")
+        
     else:
-        logger.error(f"Scan failed: {result['error']}")
-        sys.exit(1)
+        print(f"\n✗ Scan failed: {result['error']}")
+    
+    print("\n" + "=" * 60)
 
 if __name__ == "__main__":
     asyncio.run(main())

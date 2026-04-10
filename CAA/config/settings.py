@@ -12,7 +12,8 @@ for dir_path in [RAW_LOGS_DIR, ANALYZED_DIR, SCREENSHOTS_DIR, PROFILES_DIR]:
     dir_path.mkdir(parents=True, exist_ok=True)
 
 CFM_CONFIG = {
-    "binary_path": os.getenv("CFM_PATH", "./cfm_core"),
+    "binary_path": os.getenv("CFM_PATH", "/root/CFM/cpp_core/build/lib/libcfm_core.so"),
+    "lib_path": "/root/CFM/cpp_core/build/lib",
     "headless": os.getenv("HEADLESS", "false").lower() == "true",
     "timeout_seconds": 30,
     "navigation_timeout": 10,
@@ -25,7 +26,7 @@ CFM_CONFIG = {
 }
 
 SCANNER_CONFIG = {
-    "wait_before_collect": 10,
+    "wait_before_collect": 15,
     "wait_for_network_idle": 3,
     "max_retries": 3,
     "screenshot_on_block": True,
@@ -57,3 +58,7 @@ AVAILABLE_PROFILES = {
     "cfm_default": PROFILES_DIR / "cfm_default.json",
     "cfm_stealth": PROFILES_DIR / "cfm_stealth.json"
 }
+
+CFM_METRIC_PATH = "/root/CFM/cpp_core/build/metric.py"
+CFM_PROXIES_PATH = "/root/CFM/cpp_core/build/proxies.txt"
+CFM_GOST_PATH = "/root/CFM/cpp_core/build/gost"

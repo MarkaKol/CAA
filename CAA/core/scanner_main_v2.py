@@ -6,8 +6,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 import sys
 
-sys.path.insert(0, '/root/CFM/cpp_core/CAA')
-sys.path.insert(0, '/root/CFM/cpp_core/build')
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from core.cfm_adapter_v2 import CFMAdapterV2
 from utils.logger import setup_logger
@@ -46,9 +45,10 @@ class CFMScannerV2:
             await asyncio.sleep(15)
             
             if save_screenshot:
-                screenshot_path = f"/root/CFM/cpp_core/CAA/reports/screenshots/{self.current_scan_id}.png"
-                await self.cfm.screenshot(screenshot_path)
-                result["screenshot_path"] = screenshot_path
+                screenshot_path = Path(__file__).parent.parent / "reports" / "screenshots" / f"{self.current_scan_id}.png"
+                screenshot_path.parent.mkdir(parents=True, exist_ok=True)
+                await self.cfm.screenshot(str(screenshot_path))
+                result["screenshot_path"] = str(screenshot_path)
             
             result["logs"] = await self.cfm.get_logs()
             result["blocked"] = await self._detect_block()
@@ -61,7 +61,7 @@ class CFMScannerV2:
         finally:
             await self.cfm.stop()
             
-        raw_report_path = Path("/root/CFM/cpp_core/CAA/reports/raw") / f"{self.current_scan_id}.json"
+        raw_report_path = Path(__file__).parent.parent / "reports" / "raw" / f"{self.current_scan_id}.json"
         raw_report_path.parent.mkdir(parents=True, exist_ok=True)
         with open(raw_report_path, "w") as f:
             json.dump(result, f, indent=2)
@@ -76,7 +76,7 @@ class CFMScannerV2:
         page_text = await self.cfm.get_page_text()
         page_text_lower = page_text.lower()
         
-        block_indicators = ["captcha", "blocked", "access denied", "403", "forbidden", "access denied"]
+        block_indicators = ["captcha", "blocked", "access denied", "403", "forbidden", "access denied", "block"]
         for indicator in block_indicators:
             if indicator in page_text_lower:
                 return True
