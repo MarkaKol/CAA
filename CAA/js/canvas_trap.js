@@ -17,7 +17,7 @@
         console.log('[CAA_TRAP]', JSON.stringify({
             type: 'canvas',
             method: 'getImageData',
-            area: { x, y, w, h },
+            area: { x: x, y: y, w: w, h: h },
             timestamp: Date.now()
         }));
         return originalGetImageData.call(this, x, y, w, h);
@@ -29,7 +29,7 @@
             type: 'canvas',
             method: 'fillText',
             text: String(text).substring(0, 50),
-            position: { x, y },
+            position: { x: x, y: y },
             timestamp: Date.now()
         }));
         return originalFillText.call(this, text, x, y, maxWidth);
